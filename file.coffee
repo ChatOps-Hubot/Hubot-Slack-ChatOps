@@ -12,6 +12,7 @@ module.exports = (robot) ->
         file=require('xlsjs').readFile(filepath)
         param = res.match[1].replace /^\s+|\s+$/g, ""
         params = []
+        
         console.log(param)
         # command_str = file.Strings[0].t
         # query_str = file.Strings[1].t
@@ -37,7 +38,7 @@ module.exports = (robot) ->
                 query_str= file.Strings[index].t
                 break
 
-        console.log(query_str)
+        # console.log(query_str)
         if query_str == undefined
             res.send 'No Keyword Found'
         else            
@@ -45,7 +46,7 @@ module.exports = (robot) ->
             console.log(params_index)
             param_str = param.substr params_index
             param_str = param_str.replace /^\s+|\s+$/g, ""
-            console.log(param_str)
+            # console.log(param_str)
             # console.log (param_str.indexOf " ")
             searchResult = param_str.indexOf " "
             if  searchResult > 0
@@ -57,7 +58,52 @@ module.exports = (robot) ->
                 params[0] = param_str     
 
             console.log(params)
-            mrg_str = query_str.replace /{{ref_text}}/, params[0]
-            # console.log(mrg_str)
-            console.log encodeURIComponent mrg_str
-            res.send mrg_str
+            shortCountry=params[0]
+            # mrg_str = query_str.replace /{{ref_text}}/, params[0]
+            mrg_str = makeQuery params, query_str
+            console.log 'query : ' + mrg_str
+            result =  encodeURIComponent mrg_str           
+            # res.send getFunction result
+            rtStr = getFunction result
+            geturl = "http://localhost:8083/query/" + rtStr
+            console.log geturl
+            robot.http(geturl)            
+            .get() (err, response, body) ->
+                # console.log body
+                data = JSON.parse body.toString()
+                # console.log(data)             
+                if data.recordset.length > 0
+                    # res.send data.recordset[0].countrydesc 
+                    fs = require('fs')
+                    filepath = '.\\File' + '\\' + shortCountry + '.txt'
+                    fs.writeFile filepath, JSON.stringify(data.recordset[0]), (error) ->
+                        if(error)
+                            console.log('error in file')
+                            res.send 'File is not Created for ' + shortCountry 
+                        else    
+                            console.log('file created')
+                            res.send data.recordset[0].countrydesc + '\nFile is Created for ' + shortCountry 
+                
+                else
+                    res.send "No Data Found"
+
+    getFunction = (Options) ->
+          chars = {"'" : "%27", "(" : "%28" ,")" : "%29","*" : "%2A","!" : "%21","~" : "%7E"}
+          Options.replace /[~!*()']/g,  (m)  => chars[m]          
+    
+    makeQuery = (data, changeStr) ->
+        console.log 'old : ' + changeStr
+        cnt = 0
+        
+        while cnt < data.length
+            if cnt > 0 
+                refstr= '{{ref_text' + cnt + '}}'
+            else
+                refstr= '{{ref_text}}'
+            # console.log refstr
+            # console.log data[cnt]
+            changeStr = changeStr.replace refstr , data[cnt]
+            cnt++
+        console.log 'new : ' + changeStr
+        return changeStr
+
