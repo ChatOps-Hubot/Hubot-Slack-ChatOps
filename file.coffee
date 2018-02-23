@@ -177,6 +177,16 @@ module.exports = (robot) ->
 
                                      ### end Mail function ###    
 
+                                    ### generating excel file ###
+                                        json2xls = require "json2xls"
+                                        
+                                        json = JSON.stringify(data.recordset[0])
+
+                                        xls = json2xls(json)
+
+                                        fs.writeFileSync('..\\xls_data\\data.xlsx', xls, 'binary')
+                                    ### end generating excel file ###
+
                                     res.send template + '\nFile is Created for ' + shortCountry 
 
                                    
