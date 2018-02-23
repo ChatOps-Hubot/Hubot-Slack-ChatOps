@@ -8,10 +8,13 @@
 module.exports = (robot) ->
     robot.respond /(.*)/i, (res) ->
         # console.log (res.match)
-        fpath = '.\\xls' + '\\configData.xlsx'
-        configFile fpath,'Type', 'connection'
+        fpath = '.\\xls' + '\\configData.xlsx' ## config file path ###      
+        
 
-        filepath = '.\\xls' + '\\dbQuery.xlsx'
+        configDataArr = configFile fpath,'Type', 'query'
+        #filepath = '.\\xls' + '\\dbQuery.xlsx'
+        filepath = '.\\' + configDataArr.Folder + '\\' + configDataArr.Filename
+        console.log '--->' + filepath 
         file=require('xlsjs').readFile(filepath)
         param = res.match[1].replace /^\s+|\s+$/g, ""        
         params = []
@@ -19,12 +22,14 @@ module.exports = (robot) ->
 
         
         ### check db Connection Configration Available or not ###
-         
-        connfilepath = '.\\xls' + '\\dbConnection.xlsx'
+        configDataArr = configFile fpath,'Type', 'connection' 
+        #connfilepath = '.\\xls' + '\\dbConnection.xlsx'
+        connfilepath  = '.\\' + configDataArr.Folder + '\\' + configDataArr.Filename
         connfile=require('xlsjs').readFile(connfilepath)
         # console.log connfile.Sheets.Sheet1['B1']['v']   
         findConn = param.split(" ");
         Branch = ''
+        branchMail = ''
         cnt = 0
         col = 1
         console.log 'count : ' + connfile.Strings.Count
@@ -46,6 +51,9 @@ module.exports = (robot) ->
                 queryCol = 'E' + col 
                 # console.log (index)
                 conn_query_str= connfile.Sheets.Sheet1[queryCol]['v']
+
+                mailCol = 'B' + col
+                branchMail= connfile.Sheets.Sheet1[mailCol]['v']
                 break
 
         # console.log(query_str)
@@ -63,7 +71,7 @@ module.exports = (robot) ->
             # query_str = file.Strings[1].t
             # mrg_str = qury_str.replace '{{ref_text}}',res.match[1]
             console.log '-----------------------'
-            console.log(file.Strings)
+            #console.log(file.Strings)
             cnt = 0
             col = 1
             while cnt < file.Strings.Count
@@ -82,7 +90,7 @@ module.exports = (robot) ->
                 else
                     queryCol = 'B' + col 
                     # console.log (index)
-                    query_str= file.Sheets.Sheet1[queryCol].v
+                    query_str= file.Sheets.Sheet1[queryCol].v                    
                     break
 
             # console.log(query_str)
@@ -112,36 +120,68 @@ module.exports = (robot) ->
                 # mrg_str = query_str.replace /{{ref_text}}/, params[0]
                 mrg_str = makeQuery params, query_str
                 console.log 'query : ' + mrg_str
-                result =  encodeURIComponent mrg_str           
-                # res.send getFunction result
-                rtStr = getFunction result
-                geturl = "http://localhost:8083/query/"+ dbBranch + "/" + rtStr
-                console.log 'URL : ' + geturl
-                robot.http(geturl)            
-                .get() (err, response, body) ->
-                    # console.log body
-                    data = JSON.parse body
-                    # console.log(data)             
-                    if data.recordset.length > 0
-                        # res.send data.recordset[0].countrydesc 
-                        fs = require('fs')
-                        filepath = '.\\File' + '\\' + shortCountry + '.txt'
-                        fs.writeFile filepath, JSON.stringify(data.recordset[0]), (error) ->
-                            if(error)
-                                console.log('error in file')
-                                res.send 'File is not Created for ' + shortCountry 
-                            else    
-                                console.log('file created')
-                                # console.log(Object.keys(data.recordset[0]))
-                                keys = Object.keys(data.recordset[0])
-                                template = ''
-                                for k,v of data.recordset[0]
-                                    template = template + k + ' : ' + v + '\n'
-                                # console.log template                                
-                                res.send template + '\nFile is Created for ' + shortCountry 
-                    
-                    else
-                        res.send "No Data Found"
+                
+                qStrindex = mrg_str.indexOf "{"
+                if qStrindex >= 0
+                    res.send 'Not Proper Search Parameter Found'
+                else
+                    result =  encodeURIComponent mrg_str           
+                    # res.send getFunction result                
+                    rtStr = getFunction result                
+
+                    geturl = "http://localhost:8083/query/"+ dbBranch + "/" + rtStr
+                    console.log 'URL : ' + geturl
+                    robot.http(geturl)            
+                    .get() (err, response, body) ->
+                        # console.log body
+                        data = JSON.parse body
+                        # console.log(data)             
+                        if data.recordset.length > 0
+                            # res.send data.recordset[0].countrydesc 
+                            fs = require('fs')
+                            filepath = '.\\File' + '\\' + shortCountry + '.txt'
+                            fs.writeFile filepath, JSON.stringify(data.recordset[0]), (error) ->
+                                if(error)
+                                    console.log('error in file')
+                                    res.send 'File is not Created for ' + shortCountry 
+                                else    
+                                    console.log('file created')
+                                    # console.log(Object.keys(data.recordset[0]))
+                                    keys = Object.keys(data.recordset[0])
+                                    template = ''
+                                    for k,v of data.recordset[0]
+                                        template = template + k + ' : ' + v + '\n'
+                                    # console.log template   
+
+                                    ### mail Function ###
+                                    console.log 'Sender Mail ---> ' + branchMail    
+                                    nodemailer = require "nodemailer"    
+                                    smtpTransport = nodemailer.createTransport "SMTP",
+                                        service: "Gmail"
+                                        auth:
+                                            user: 'chrisgraham0104@gmail.com'
+                                            pass: 'ae6317@sh'
+
+                                    mail =
+                                        from: "chrisgraham0104@gmail.com"
+                                        to: branchMail
+                                        subject:"Test"
+                                        text: "Test sending mail to tumblr by coffeescript and nodemailer"
+
+                                    smtpTransport.sendMail mail, (error, response) ->
+                                        if error
+                                            console.log(error)
+                                        else
+                                            console.log("Message sent: " + response.message)
+                                        smtpTransport.close()
+
+                                     ### end Mail function ###    
+
+                                    res.send template + '\nFile is Created for ' + shortCountry 
+
+                                   
+                        else
+                            res.send "No Data Found"
 
     getFunction = (Options) ->
           chars = {"'" : "%27", "(" : "%28" ,")" : "%29","*" : "%2A","!" : "%21","~" : "%7E"}
@@ -171,13 +211,13 @@ module.exports = (robot) ->
         sheet_name_list = workbook.SheetNames
 
         for k,v in sheet_name_list
-            console.log k + ' ' + v
+            #console.log k + ' ' + v
             worksheet =  workbook.Sheets[k]
             ref = '!ref'
 
-            console.log worksheet['!ref']
+            #console.log worksheet['!ref']
             range = worksheet['!ref'].split ":"
-            console.log range
+            #console.log range
 
             x= range[0]
             y = range[1]
@@ -191,38 +231,64 @@ module.exports = (robot) ->
             stAlp = stAlpc.charCodeAt 0
             spAlp = spAlpc.charCodeAt 0
 
-            console.log stAlp + ' ' + spAlp + ' ' + stNum + ' ' + spNum
+            #console.log stAlp + ' ' + spAlp + ' ' + stNum + ' ' + spNum
 
-            headers = {}
-            data = []
+            headers = {}            
             xlsData = {} 
-            for z in [stAlp..spAlp]
-                for x in [stNum..spNum]
+            data = []
+
+            ### loop for headers ###
+
+            for z in [stAlp.. spAlp]
+                row = 1 
+                col = String.fromCharCode(z)
+                sheetcell = col + row
+                #console.log worksheet[sheetcell]
+                if worksheet[sheetcell] == undefined                        
+                    #continue
+                    value = ''
+                else
+                    value = worksheet[sheetcell].v
+
+                headers[sheetcell] = value    
+
+            ### end headers loop  ###
+
+            # console.log 'headers --> ' + JSON.stringify headers
+            stNum++ 
+            for z in [stNum..spNum]
+                tmpArr = {}    
+                for x in [stAlp..spAlp]         
                     # console.log String.fromCharCode(z) + ' ' + x
-                    row = x
-                    col = String.fromCharCode(z)
+                    row = z
+                    col = String.fromCharCode(x)
                     sheetcell = col + row
-                    console.log worksheet[sheetcell]
-                    if worksheet[sheetcell] == undefined
-                        continue
+                    #console.log worksheet[sheetcell]
+                    if worksheet[sheetcell] == undefined                        
+                        #continue
+                        value = ''
                     else
                         value = worksheet[sheetcell].v
 
-                    console.log col + ' ' + row + ' ' + value
+                    #console.log col + ' ' + row + ' ' + value
 
+                    ###
                     if row == 1
                         headers[col] = value
                         continue
 
-                    if !data[row] 
-                        data[row] = {}
-                
-                data[row][headers[col]] = value
-                
-            data.shift()
-            data.shift()
-
-            console.log 'config Data -> ' + JSON.stringify data
+                    if data[row] != ''  
+                        data[row] = {}                
+                    ###
+                    headerCnt = 1
+                    headerCell = col + headerCnt    
+                    tmpArr[headers[headerCell]] = value
+                    #data[row][headers[col]] = value
+                    #console.log 'tmpArr Data -> ' + JSON.stringify tmpArr    
+                    data.push tmpArr
+                    
+            
+            #console.log 'final Data -> ' + JSON.stringify data
 
             xlsData = data.find (x) -> 
                 
@@ -232,6 +298,6 @@ module.exports = (robot) ->
                 if field == 'Branch'
                     return x.BranchID == fvalue
 
-            console.log 'xls ---->' + xlsData
+            console.log 'xls ---->' + JSON.stringify xlsData
             
             return xlsData
