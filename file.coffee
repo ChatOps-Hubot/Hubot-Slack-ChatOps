@@ -54,6 +54,9 @@ module.exports = (robot) ->
 
                 mailCol = 'B' + col
                 branchMail= connfile.Sheets.Sheet1[mailCol]['v']
+
+                branchCol = 'A' + col
+                Branch= connfile.Sheets.Sheet1[branchCol]['v']
                 break
 
         # console.log(query_str)
@@ -135,7 +138,7 @@ module.exports = (robot) ->
                     .get() (err, response, body) ->
                         # console.log body
                         data = JSON.parse body
-                        # console.log(data)             
+                        console.log(data)             
                         if data.recordset.length > 0
                             # res.send data.recordset[0].countrydesc 
                             fs = require('fs')
@@ -153,20 +156,40 @@ module.exports = (robot) ->
                                         template = template + k + ' : ' + v + '\n'
                                     # console.log template   
 
+                                    ### generating excel file ###
+                                    json2xls = require "json2xls"
+                                        
+                                    json =  data.recordset[0]
+
+                                    xls = json2xls(json)
+
+                                    configDataArr = configFile fpath,'Type', 'outputxls'
+                                    #filepath = '.\\xls_data\\data.xlsx'
+                                    fname = Branch + '_' + shortCountry + Date.toLocaleString() + '.xlsx'
+                                    xfilepath = '.\\' + configDataArr.Folder + '\\' + fname 
+
+                                    fs.writeFileSync(xfilepath, xls, 'binary')
+                                    ### end generating excel file ###
+
+
                                     ### mail Function ###
                                     console.log 'Sender Mail ---> ' + branchMail    
+                                    attach = []
+                                    tmpAtt = {filename: fname, path:xfilepath, contentType: 'application/xlsx' }
+                                    attach.push tmpAtt    
                                     nodemailer = require "nodemailer"    
                                     smtpTransport = nodemailer.createTransport "SMTP",
                                         service: "Gmail"
                                         auth:
-                                            user: 'chrisgraham0104@gmail.com'
-                                            pass: 'ae6317@sh'
+                                            user: 'hubotest23@gmail.com'
+                                            pass: 'S$35@v$#@_'
 
                                     mail =
-                                        from: "chrisgraham0104@gmail.com"
+                                        from: "hubotest23@gmail.com"
                                         to: branchMail
-                                        subject:"Test"
-                                        text: "Test sending mail to tumblr by coffeescript and nodemailer"
+                                        subject: Branch + ' ' + shortCountry + ' Data File' 
+                                        text: "Auto Generated Mail Contain Response Data"
+                                        attachments:attach
 
                                     smtpTransport.sendMail mail, (error, response) ->
                                         if error
@@ -175,17 +198,9 @@ module.exports = (robot) ->
                                             console.log("Message sent: " + response.message)
                                         smtpTransport.close()
 
-                                     ### end Mail function ###    
+                                    ### end Mail function ###    
 
-                                    ### generating excel file ###
-                                        json2xls = require "json2xls"
-                                        
-                                        json = JSON.stringify(data.recordset[0])
-
-                                        xls = json2xls(json)
-
-                                        fs.writeFileSync('..\\xls_data\\data.xlsx', xls, 'binary')
-                                    ### end generating excel file ###
+                                    
 
                                     res.send template + '\nFile is Created for ' + shortCountry 
 
