@@ -187,12 +187,12 @@ module.exports = (robot) ->
                                     ### mail Function ###
                                     console.log 'Sender Mail ---> ' + branchMail    
                                     attach = []
-                                    tmpAtt = {filename: fname, path:xfilepath, contentType: 'application/xlsx' }
+                                    tmpAtt = {filename: fname, path:xfilepath }
                                     attach.push tmpAtt    
-                                    
+                                    console.log 'Attache --> ' + JSON.stringify attach
                                     nodemailer = require "nodemailer"    
                                     smtpTransport = nodemailer.createTransport "SMTP",
-                                        service: "Gmail",                                       
+                                        service: "Gmail",                                        
                                         auth:
                                             user: 'hubotest23@gmail.com'
                                             pass: 'S$35@v$#@_'
