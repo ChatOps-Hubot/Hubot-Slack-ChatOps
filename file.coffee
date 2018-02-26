@@ -165,9 +165,21 @@ module.exports = (robot) ->
 
                                     configDataArr = configFile fpath,'Type', 'outputxls'
                                     #filepath = '.\\xls_data\\data.xlsx'
-                                    fname = Branch + '_' + shortCountry + Date.toLocaleString() + '.xlsx'
-                                    xfilepath = '.\\' + configDataArr.Folder + '\\' + fname 
+                                    ### set date format ###
+                                    today = new Date  
+                                    hour = today.getHours()  
+                                    minute = today.getMinutes()  
+                                    second = today.getSeconds()   
+                                    dd = today.getDate() 
+                                    mm = today.getMonth() + 1  
+                                    yyyy = today.getFullYear()  
 
+                                    fdate =  '_' + dd+ mm + yyyy + '-' + hour + minute + second
+                                    ### end Date format ###
+
+                                    fname = Branch + '_' + shortCountry + fdate + '.xlsx'
+                                    xfilepath = '.\\' + configDataArr.Folder + '\\' + fname 
+                                    console.log 'xls file path --> ' + xfilepath
                                     fs.writeFileSync(xfilepath, xls, 'binary')
                                     ### end generating excel file ###
 
@@ -177,9 +189,10 @@ module.exports = (robot) ->
                                     attach = []
                                     tmpAtt = {filename: fname, path:xfilepath, contentType: 'application/xlsx' }
                                     attach.push tmpAtt    
+                                    
                                     nodemailer = require "nodemailer"    
                                     smtpTransport = nodemailer.createTransport "SMTP",
-                                        service: "Gmail"
+                                        service: "Gmail",                                       
                                         auth:
                                             user: 'hubotest23@gmail.com'
                                             pass: 'S$35@v$#@_'
@@ -200,11 +213,8 @@ module.exports = (robot) ->
 
                                     ### end Mail function ###    
 
-                                    
-
                                     res.send template + '\nFile is Created for ' + shortCountry 
 
-                                   
                         else
                             res.send "No Data Found"
 
