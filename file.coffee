@@ -191,7 +191,7 @@ module.exports = (robot) ->
                                     attach.push tmpAtt    
                                     console.log 'Attache --> ' + JSON.stringify attach
                                     nodemailer = require "nodemailer"    
-                                    smtpTransport = nodemailer.createTransport "SMTP",
+                                    smtpTransport = nodemailer.createTransport 
                                         service: "Gmail",                                        
                                         auth:
                                             user: 'hubotest23@gmail.com'
