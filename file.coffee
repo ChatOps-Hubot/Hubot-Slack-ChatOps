@@ -208,7 +208,7 @@ module.exports = (robot) ->
                                         if error
                                             console.log(error)
                                         else
-                                            console.log("Message sent: " + response.message)
+                                            console.log("Message sent: " + response.response)
                                         smtpTransport.close()
 
                                     ### end Mail function ###    
